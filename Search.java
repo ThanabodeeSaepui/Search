@@ -1,6 +1,15 @@
 import java.io.File;
-import java.io.FileWriter;
+import java.io.StringReader;
+
 import java.util.regex.Pattern;
+
+import javax.xml.parsers.*;
+import javax.xml.transform.*;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+
+import org.w3c.dom.Document;
+import org.xml.sax.InputSource;
 
 public class Search {
     public static void main(String[] args) {
@@ -16,7 +25,9 @@ public class Search {
         if (root != null) {
             System.out.println(root);
             String xmlString = toXML(root);
-            saveXML(xmlString);
+            System.out.println(xmlString);
+            Document doc = convertStringToDocument(xmlString);
+            saveXML(doc);
 
         } else {
             System.out.println("Can't find file/folder");
@@ -51,7 +62,7 @@ public class Search {
 
     public static String toXML(String path) {
         File f = new File(path);
-        String root = "<folder name=" + '"' + f.getName() + '"' + '>';
+        String root = "<folder name=\"" + f.getName() + "\">";
         File[] files = f.listFiles();
         if (files != null && files.length > 0) {
             for (File file : files) {
@@ -67,16 +78,30 @@ public class Search {
         return root;
     }
 
-    public static void saveXML(String xmlString) {
+    public static Document convertStringToDocument(String xmlStr) {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder;
         try {
-            FileWriter myWriter = new FileWriter("save.xml");
-            // <?xml version="1.0" encoding="UTF-8"?>
-            myWriter.write(
-                    "<?xml version=" + '"' + "1.0" + '"' + " encoding=" + '"' + "UTF-8" + '"' + "?>" + xmlString);
-            myWriter.close();
+            builder = factory.newDocumentBuilder();
+            Document doc = builder.parse(new InputSource(new StringReader(xmlStr)));
+            return doc;
         } catch (Exception e) {
-            System.out.println("An error occurred.");
             e.printStackTrace();
+        }
+        return null;
+    }
+
+    public static void saveXML(Document doc) {
+        try {
+            TransformerFactory transformerFactory = TransformerFactory.newInstance();
+            Transformer transformer = transformerFactory.newTransformer();
+            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+            transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
+            DOMSource domSource = new DOMSource(doc);
+            StreamResult streamResult = new StreamResult(new File("./save.xml"));
+            transformer.transform(domSource, streamResult);
+        } catch (TransformerException tfe) {
+            tfe.printStackTrace();
         }
     }
 }
