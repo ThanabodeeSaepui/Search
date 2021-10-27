@@ -1,6 +1,6 @@
 import java.io.File;
 import java.io.StringReader;
-
+import java.util.ArrayList;
 import java.util.regex.Pattern;
 
 import javax.xml.parsers.*;
@@ -9,6 +9,7 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
 import org.w3c.dom.Document;
+import org.w3c.dom.*;
 import org.xml.sax.InputSource;
 
 public class Search {
@@ -28,6 +29,15 @@ public class Search {
             System.out.println(xmlString);
             Document doc = convertStringToDocument(xmlString);
             saveXML(doc);
+            Document XML = loadXML("./save.xml");
+            ArrayList<String> found = searchXML(XML, "^hello.{0,}");
+            if (found.size() > 0) {
+                for (String f : found) {
+                    System.out.println(f);
+                }
+            } else {
+                System.out.println("Cannot find file/folder");
+            }
 
         } else {
             System.out.println("Can't find file/folder");
@@ -103,5 +113,41 @@ public class Search {
         } catch (TransformerException tfe) {
             tfe.printStackTrace();
         }
+    }
+
+    public static Document loadXML(String saveName) {
+        try {
+            File file = new File(saveName);
+            DocumentBuilderFactory documentFactory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder documentBuilder = documentFactory.newDocumentBuilder();
+            Document document = documentBuilder.parse(file);
+            document.getDocumentElement().normalize();
+            return document;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public static ArrayList<String> searchXML(Document doc, String regex) {
+        ArrayList<String> found = new ArrayList<String>();
+        NodeList folder = doc.getElementsByTagName("folder");
+        NodeList file = doc.getElementsByTagName("file");
+        for (int i = 0; i < folder.getLength(); i++) {
+            Node node = folder.item(i);
+            System.out.println("\nNode Name :" + node.getNodeName());
+            if (node.getNodeType() == Node.ELEMENT_NODE) {
+                Element eElement = (Element) node;
+                String name = eElement.getAttribute("name");
+                System.out.println(name);
+            }
+        }
+        for (int i = 0; i < file.getLength(); i++) {
+            Node node = file.item(i);
+            System.out.println("\nNode Name :" + node.getNodeName());
+            System.out.println(node.getTextContent());
+        }
+        return found;
     }
 }
