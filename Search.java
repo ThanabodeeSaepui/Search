@@ -26,12 +26,12 @@ public class Search {
         if (root != null) {
             System.out.println(root);
             String xmlString = toXML(root);
-            System.out.println(xmlString);
             Document doc = convertStringToDocument(xmlString);
             saveXML(doc);
             Document XML = loadXML("./save.xml");
             ArrayList<String> found = searchXML(XML, "^hello.{0,}");
             if (found.size() > 0) {
+                System.out.println("Found\n");
                 for (String f : found) {
                     System.out.println(f);
                 }
@@ -136,17 +136,20 @@ public class Search {
         NodeList file = doc.getElementsByTagName("file");
         for (int i = 0; i < folder.getLength(); i++) {
             Node node = folder.item(i);
-            System.out.println("\nNode Name :" + node.getNodeName());
             if (node.getNodeType() == Node.ELEMENT_NODE) {
                 Element eElement = (Element) node;
                 String name = eElement.getAttribute("name");
-                System.out.println(name);
+                if (Pattern.matches(regex,name)) {
+                    found.add(name);
+                }
             }
         }
         for (int i = 0; i < file.getLength(); i++) {
             Node node = file.item(i);
-            System.out.println("\nNode Name :" + node.getNodeName());
-            System.out.println(node.getTextContent());
+            String name = node.getTextContent();
+            if (Pattern.matches(regex,name)) {
+                found.add(name);
+            }
         }
         return found;
     }
