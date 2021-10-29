@@ -1,36 +1,46 @@
 import os, re, sys
 import xml.etree.ElementTree as ET
+import hashlib
+import xml.dom.minidom
 
 
 def search(rootpath, name):
-    result = list()
+    result = ""
     for file in os.listdir(rootpath):
         d = os.path.abspath(os.path.join(rootpath, file))
         print("Process in " + d)
-        if re.search(name, os.path.basename(d)):
-            result.append(d)
         if os.path.isdir(d):
-            result.extend(search(d, name))
+            if re.search(name, os.path.basename(d)):
+                result = d
+                return result
+            else:
+                result = search(d, name)
+                if result != "":
+                    break
     return result
 
 
 def pathtoxml(path):
-    xmlstr = str()
+    xmlstr = ""
     if os.path.isdir(path):
-        xmlstr += f'<folder name="{os.path.basename(path)}">\n\t'
+        xmlstr += f'<folder name="{os.path.basename(path)}">'
         for file in os.listdir(path):
             d = os.path.abspath(os.path.join(path, file))
             if os.path.isdir(d):
                 xmlstr += pathtoxml(d)
             elif os.path.isfile(d):
-                xmlstr += f"\t<file>{os.path.basename(d)}</file>\n"
-        xmlstr += "</folder>\n"
+                md5_hash = hashlib.md5()
+                a_file = open(d, "rb")
+                content = a_file.read()
+                md5_hash.update(content)
+                xmlstr += f"<file md5=\"{md5_hash.hexdigest()}\">{os.path.basename(d)}</file>"
+        xmlstr += "</folder>"
     return xmlstr
 
 
 def savexml(xmlstr):
-    with open("save.xml", "w", encoding="utf-8") as f:
-        f.write('<?xml version="1.0" encoding="UTF-8"?>\n' + xmlstr)
+    with open("save.xml", "wb") as f:
+        f.write(xmlstr)
 
 
 def searchXML(regex, xml):
@@ -53,18 +63,18 @@ def searchXML(regex, xml):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 3:
+    if len(sys.argv) == 4:
         file_search = search(str(sys.argv[1]), str(sys.argv[2]))
+        regex = sys.argv[3]
         print("*** " * 3 + "END OF PROCESS " + "*** " * 3)
-        if len(file_search) > 0:
-            print(f"Found {len(file_search)}.\n")
-            xml = str()
-            for i in file_search:
-                # print(i)
-                xml += pathtoxml(i)
-            savexml(xml)
+        if file_search != "":
+            print(f"Found {file_search}.\n")
+            XML = pathtoxml(file_search)
+            XML = xml.dom.minidom.parseString(XML)
+            XML = XML.toprettyxml(encoding='utf-8')
+            savexml(XML)
             saveXML = ET.parse("./save.xml")
-            found = searchXML(r"^hello.{0,}", saveXML)
+            found = searchXML(regex, saveXML)
             if len(found) > 0:
                 for i, f in enumerate(found):
                     print(f"Found {i+1}: {f}")
@@ -72,7 +82,8 @@ if __name__ == "__main__":
                 print("Not found in saveXML")
         else:
             print("Not Found.")
-    elif len(sys.argv) < 3:
+    elif len(sys.argv) < 4:
         print("Error : Missing Search Argument.")
+        print('''Example : python3 Search.py /home "Search Test" "hello.{0,}"''')
     else:
-        print("Error : Must not have more than 2 Argument.")
+        print("Error : Must not have more than 3 Argument.")

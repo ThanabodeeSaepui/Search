@@ -1,4 +1,6 @@
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
@@ -12,16 +14,23 @@ import org.w3c.dom.Document;
 import org.w3c.dom.*;
 import org.xml.sax.InputSource;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
 public class Search {
-    public static void main(String[] args) {
-        String path, fileName, root;
+
+    public static void main(String[] args) throws NoSuchAlgorithmException, IOException {
+        String path, fileName, root, regex;
         try {
             path = args[0];
             fileName = args[1];
+            regex = args[2];
             root = search(path, fileName);
         } catch (Exception ArrayIndexOutOfBounds) {
             System.out.println("Wrong parameter given");
+            System.out.println("path, saveFolderToXML, regex");
             root = null;
+            regex = "";
         }
         if (root != null) {
             System.out.println(root);
@@ -29,18 +38,11 @@ public class Search {
             Document doc = convertStringToDocument(xmlString);
             saveXML(doc);
             Document XML = loadXML("./save.xml");
-            ArrayList<String> found = searchXML(XML, "^hello.{0,}");
-            if (found.size() > 0) {
-                System.out.println("Found\n");
-                for (String f : found) {
-                    System.out.println(f);
-                }
-            } else {
-                System.out.println("Cannot find file/folder");
+            ArrayList<String> found = searchXML(XML, regex);
+            System.out.println("Found\n");
+            for (String f : found) {
+                System.out.println(f);
             }
-
-        } else {
-            System.out.println("Can't find file/folder");
         }
     }
 
@@ -70,14 +72,16 @@ public class Search {
         return null;
     }
 
-    public static String toXML(String path) {
+    public static String toXML(String path) throws IOException,NoSuchAlgorithmException {
         File f = new File(path);
         String root = "<folder name=\"" + f.getName() + "\">";
         File[] files = f.listFiles();
         if (files != null && files.length > 0) {
             for (File file : files) {
                 if (!file.isDirectory()) {
-                    String fileTag = "<file>" + file.getName() + "</file>";
+                    MessageDigest md5Digest = MessageDigest.getInstance("MD5");
+                    String hash = getFileChecksum(md5Digest, file);
+                    String fileTag = "<file md5=\""+hash+"\">" + file.getName() + "</file>";
                     root += fileTag;
                 } else {
                     root += toXML(file.getAbsolutePath());
@@ -139,7 +143,7 @@ public class Search {
             if (node.getNodeType() == Node.ELEMENT_NODE) {
                 Element eElement = (Element) node;
                 String name = eElement.getAttribute("name");
-                if (Pattern.matches(regex,name)) {
+                if (Pattern.matches(regex, name)) {
                     found.add(name);
                 }
             }
@@ -147,10 +151,42 @@ public class Search {
         for (int i = 0; i < file.getLength(); i++) {
             Node node = file.item(i);
             String name = node.getTextContent();
-            if (Pattern.matches(regex,name)) {
+            if (Pattern.matches(regex, name)) {
                 found.add(name);
             }
         }
         return found;
+    }
+
+    private static String getFileChecksum(MessageDigest digest, File file) throws IOException {
+        // Get file input stream for reading the file content
+        
+        FileInputStream fis = new FileInputStream(file);
+
+        // Create byte array to read data in chunks
+        byte[] byteArray = new byte[1024];
+        int bytesCount = 0;
+
+        // Read file data and update in message digest
+        while ((bytesCount = fis.read(byteArray)) != -1) {
+            digest.update(byteArray, 0, bytesCount);
+        }
+        ;
+
+        // close the stream; We don't need it now.
+        fis.close();
+
+        // Get the hash's bytes
+        byte[] bytes = digest.digest();
+
+        // This bytes[] has bytes in decimal format;
+        // Convert it to hexadecimal format
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < bytes.length; i++) {
+            sb.append(Integer.toString((bytes[i] & 0xff) + 0x100, 16).substring(1));
+        }
+
+        // return complete hash
+        return sb.toString();
     }
 }
