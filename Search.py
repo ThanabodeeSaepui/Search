@@ -2,7 +2,7 @@ import os, re, sys
 import xml.etree.ElementTree as ET
 import hashlib
 import xml.dom.minidom
-
+from datetime import datetime
 
 def search(rootpath, name):
     result = ""
@@ -33,7 +33,10 @@ def pathtoxml(path):
                 a_file = open(d, "rb")
                 content = a_file.read()
                 md5_hash.update(content)
-                xmlstr += f"<file md5=\"{md5_hash.hexdigest()}\">{os.path.basename(d)}</file>"
+                size = os.path.getsize(d)
+                date = os.path.getmtime(d)
+                date = datetime.fromtimestamp(date).strftime('%d/%m/%Y %H:%M:%S')
+                xmlstr += f'<file md5="{md5_hash.hexdigest()}" size="{size}" date="{date}">{os.path.basename(d)}</file>'
         xmlstr += "</folder>"
     return xmlstr
 
