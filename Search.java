@@ -17,6 +17,8 @@ import org.xml.sax.InputSource;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import java.text.SimpleDateFormat;
+
 public class Search {
 
     public static void main(String[] args) throws NoSuchAlgorithmException, IOException {
@@ -25,6 +27,7 @@ public class Search {
             path = args[0];
             fileName = args[1];
             regex = args[2];
+            System.out.println(path);
             root = search(path, fileName);
         } catch (Exception ArrayIndexOutOfBounds) {
             System.out.println("Wrong parameter given");
@@ -81,7 +84,11 @@ public class Search {
                 if (!file.isDirectory()) {
                     MessageDigest md5Digest = MessageDigest.getInstance("MD5");
                     String hash = getFileChecksum(md5Digest, file);
-                    String fileTag = "<file md5=\""+hash+"\">" + file.getName() + "</file>";
+                    String fileSize = String.valueOf(file.length());
+                    SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+                    String date = sdf.format(file.lastModified());
+                    String openTag = "<file md5=\""+hash+"\" size=\""+fileSize+"\" date=\""+date+"\">";
+                    String fileTag = openTag + file.getName() + "</file>";
                     root += fileTag;
                 } else {
                     root += toXML(file.getAbsolutePath());
